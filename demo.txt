@@ -1,0 +1,44 @@
+eval $(docker-machine env swarm0)
+
+docker ps
+# visar de containers som kör i swarm0
+# dvs _swarm manager_
+
+eval $(docker-machine env node0)
+
+docker ps
+# visar registrator och swarm agent
+
+DOCKER_HOST=$(docker-machine ip swarm0):4000
+
+docker info
+# visar att swarm är manager över två nodes (node0 och node1)
+
+docker ps
+# visar de containers som kör i klustret
+
+docker-compose up -d flask-blue
+
+docker-compose scale flask-blue=4
+
+===== CREATE A NEW NODE =======
+
+docker-machine create -d virtualbox \ 
+    --engine-opt="label=com.function=swarm-node" \
+    node2
+
+eval $(docker-machine env node2)
+
+docker run -d swarm join \
+    --advertise=$(docker-machine ip node2):2376 \
+    consul://$(docker-machine ip keystore):8500
+
+HOST_IP=$(docker-machine ip node2)
+
+docker run -d \
+        --name=registrator \
+        --volume=/var/run/docker.sock:/tmp/docker.sock \
+        gliderlabs/registrator:latest \
+        -ip $HOST_IP \
+        consul://$(docker-machine ip keystore):8500
+

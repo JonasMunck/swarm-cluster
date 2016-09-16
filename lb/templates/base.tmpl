@@ -1,0 +1,23 @@
+# Base configuration, accept and redirect all trafic with round robin
+
+upstream checkout { 
+{{range $tag, $services := service "helloflask" | byTag}}
+    {{ range $services }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60;
+    {{ end }}                
+{{end }}
+}
+
+server {
+
+    listen 80;
+
+    charset utf-8;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+
+    location / {
+            proxy_pass http://checkout;
+    }       
+}

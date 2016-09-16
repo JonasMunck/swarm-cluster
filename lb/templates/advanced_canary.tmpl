@@ -1,0 +1,96 @@
+# advanced_canary
+
+
+upstream checkout_upstream_blue { {{range $tag, $services := service "helloflask" | byTag}}{{ if $tag | regexMatch "blue" }}{{ range $services }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight=1; {{ end }}{{end }}{{end}}
+}
+
+upstream checkout_upstream_green { {{range $tag, $services := service "helloflask" | byTag}}{{ if $tag | regexMatch "green" }}{{ range $services }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight=1; {{ end }}{{end }}{{end}}
+}
+
+
+{{$key := key "service/checkout/factor" | parseInt }}
+
+
+upstream checkout { 
+
+
+{{range $tag, $services := service "helloflask" | byTag}}
+{{ range $services }}
+
+{{ if $key | eq 0}}
+	{{ if key "service/checkout/current" | regexMatch "blue" }}
+  	  {{ if $tag | regexMatch "blue" }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight=1; 
+  	  {{ end }}
+	{{ end }}	
+
+{{ else if $key | eq 100}}
+	{{ if key "service/checkout/current" | regexMatch "green" }}
+  	  {{ if $tag | regexMatch "green" }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight=1; 
+  	  {{ end }}
+	{{ end }}	
+
+{{ else }}
+
+
+{{ if key "service/checkout/current" | regexMatch "green" }}
+{{ if $tag | regexMatch "green" }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight={{key "service/checkout/factor" }}; 
+
+{{ end }}
+{{ if $tag | regexMatch "blue" }}
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight={{ key "service/checkout/factor" | parseInt | subtract 100  | multiply -1}}; 
+
+{{ end }}
+{{ end }}
+
+
+{{ if key "service/checkout/current" | regexMatch "blue" }}
+  {{ if $tag | regexMatch "blue" }}
+
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight={{key "service/checkout/factor" }}; 
+
+  {{ end }}
+  {{ if $tag | regexMatch "green" }}
+
+        server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight={{ key "service/checkout/factor" | parseInt | subtract 100 | multiply -1}}; 
+
+  {{ end }}
+{{ end }}
+
+{{ end }}
+{{ end }}
+{{end }}
+}
+        server {
+                listen 80;
+
+                charset utf-8;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+              
+
+                {{ if key "service/checkout/current" | regexMatch "blue" }}
+                location / {
+                        proxy_pass http://checkout_upstream_blue;
+                }
+                location /next/ {
+                        proxy_pass http://checkout_upstream_green/;
+                }
+                {{ end }}
+
+                {{ if key "service/checkout/current" | regexMatch "green" }}
+                location / {
+                        proxy_pass http://checkout_upstream_green/;
+                }
+                location /next/ {
+                		proxy_pass http://checkout_upstream_blue;
+                        
+                }
+                {{ end }}
+
+        }

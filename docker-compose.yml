@@ -1,0 +1,30 @@
+consul:
+  command: -server -bootstrap -ui-dir ui -config-file=/jonas/conf.json
+  image: progrium/consul
+  ports:
+  - "8300:8300"
+  - "8400:8400"
+  - "8500:8500"
+  - "8600:53/udp"
+  volumes:
+   - "./consul:/jonas"
+
+
+lb:
+  build: ./lb
+  ports:
+    - "80:80"
+  volumes:
+    - "./lb/templates:/templates"
+  environment:
+    SERVICE_TAGS: lb, production
+
+
+registrator:
+  command: consul://192.168.99.101:8500
+  image: gliderlabs/registrator:latest
+  links:
+    - consul
+  volumes:
+    - "/var/run/docker.sock:/tmp/docker.sock"
+  # net: "host"

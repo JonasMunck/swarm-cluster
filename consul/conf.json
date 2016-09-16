@@ -1,0 +1,10 @@
+{
+
+  "watches": [
+      {
+          "type": "checks",
+          "service": "checkout",
+          "handler": "/jonas/critical.sh"
+      }
+    ]
+}

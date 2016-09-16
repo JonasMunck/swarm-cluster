@@ -1,0 +1,25 @@
+#flasker:
+#  image: jonasmunck/flasker
+#  ports:
+  #  - "5000"
+#  environment:
+  #  SERVICE_NAME: helloflask
+  #  SERVICE_TAGS: loadbalancer, production
+
+flask-blue:
+  image: jonasmunck/flasker:latest
+  ports:
+    - "5000"
+  environment:
+    SERVICE_NAME: helloflask
+    SERVICE_COLOR: blue
+    SERVICE_TAGS: loadbalancer, production, blue
+
+flask-green:
+  image: jonasmunck/flasker:latest
+  ports:
+    - "5000"
+  environment:
+    SERVICE_NAME: helloflask
+    SERVICE_COLOR: green
+    SERVICE_TAGS: loadbalancer, production, green
